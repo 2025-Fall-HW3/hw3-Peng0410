@@ -62,7 +62,12 @@ class EqualWeightPortfolio:
         """
         TODO: Complete Task 1 Below
         """
+        num_assets_to_include = len(assets)
 
+        if num_assets_to_include > 0:
+            equal_weight_value = 1.0 / num_assets_to_include
+            # Assign the equal weight to all included assets for all dates
+            self.portfolio_weights[assets] = equal_weight_value
         """
         TODO: Complete Task 1 Above
         """
