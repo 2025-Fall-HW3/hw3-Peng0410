@@ -6,7 +6,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import quantstats as qs
-import gurobipy as gp
+try:
+    import gurobipy as gp
+except ImportError:
+    gp = None  # Will fail at Task 3 if gurobipy not installed
 import argparse
 import warnings
 import sys
@@ -120,7 +123,11 @@ class RiskParityPortfolio:
         rolling_vol = df_returns[assets].rolling(self.lookback).std()
         inv_vol = 1 / rolling_vol
         weights = inv_vol.div(inv_vol.sum(axis=1), axis=0)
-        self.portfolio_weights.loc[:, assets] = weights
+        # Shift weights by 1 day to avoid look-ahead bias
+        weights_shifted = weights.shift(1)
+        # Set first lookback+1 rows to NaN (they will be filled with 0 later)
+        weights_shifted.iloc[:self.lookback+1] = np.nan
+        self.portfolio_weights[assets] = weights_shifted
 
         """
         TODO: Complete Task 2 Above
