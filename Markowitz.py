@@ -55,45 +55,43 @@ class EqualWeightPortfolio:
         self.exclude = exclude
 
     def calculate_weights(self):
-        # Get the assets by excluding the specified column
         assets = df.columns[df.columns != self.exclude]
-        self.portfolio_weights = pd.DataFrame(index=df.index, columns=df.columns)
+
+        
+        self.portfolio_weights = pd.DataFrame(0, index=df.index, columns=df.columns)
 
         """
         TODO: Complete Task 1 Below
         """
-        num_assets_to_include = len(assets)
-
-        if num_assets_to_include > 0:
-            equal_weight_value = 1.0 / num_assets_to_include
-            # Assign the equal weight to all included assets for all dates
-            self.portfolio_weights[assets] = equal_weight_value
+        num_assets = len(assets)
+        if num_assets > 0:
+            equal_w = 1.0 / num_assets
+            self.portfolio_weights.loc[:, assets] = equal_w
         """
         TODO: Complete Task 1 Above
         """
+
+        
         self.portfolio_weights.ffill(inplace=True)
         self.portfolio_weights.fillna(0, inplace=True)
 
     def calculate_portfolio_returns(self):
-        # Ensure weights are calculated
         if not hasattr(self, "portfolio_weights"):
             self.calculate_weights()
 
-        # Calculate the portfolio returns
         self.portfolio_returns = df_returns.copy()
         assets = df.columns[df.columns != self.exclude]
+
+        
         self.portfolio_returns["Portfolio"] = (
-            self.portfolio_returns[assets]
-            .mul(self.portfolio_weights[assets])
-            .sum(axis=1)
-        )
+            self.portfolio_returns[assets] * self.portfolio_weights[assets]
+        ).sum(axis=1)
 
     def get_results(self):
-        # Ensure portfolio returns are calculated
         if not hasattr(self, "portfolio_returns"):
             self.calculate_portfolio_returns()
-
         return self.portfolio_weights, self.portfolio_returns
+
 
 
 """
@@ -118,8 +116,10 @@ class RiskParityPortfolio:
         """
         TODO: Complete Task 2 Below
         """
-
-
+        rolling_vol = df_returns[assets].rolling(self.lookback).std()
+        inv_vol = 1 / rolling_vol.replace(0, np.nan)
+        weights = inv_vol.div(inv_vol.sum(axis=1), axis=0)
+        self.portfolio_weights.loc[:, assets] = weights
 
         """
         TODO: Complete Task 2 Above
@@ -193,10 +193,18 @@ class MeanVariancePortfolio:
                 TODO: Complete Task 3 Below
                 """
 
-                # Sample Code: Initialize Decision w and the Objective
-                # NOTE: You can modify the following code
-                w = model.addMVar(n, name="w", ub=1)
-                model.setObjective(w.sum(), gp.GRB.MAXIMIZE)
+                # Decision variable: w[i] for i in assets
+                w = model.addMVar(n, lb=0, ub=1, name="w")
+
+                # Objective:
+                # max w^T mu - gamma/2 * w^T Σ w
+                quad = w @ Sigma @ w
+                ret = w @ mu
+
+                model.setObjective(ret - (gamma / 2) * quad, gp.GRB.MAXIMIZE)
+
+                # Constraint: sum(w) = 1
+                model.addConstr(w.sum() == 1, name="budget")
 
                 """
                 TODO: Complete Task 3 Above
