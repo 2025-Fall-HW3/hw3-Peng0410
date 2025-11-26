@@ -72,17 +72,22 @@ class MyPortfolio:
         """
         for i in range(self.lookback, len(self.price)):
             window = self.returns[assets].iloc[i - self.lookback : i]
-            momentum = (1 + window).prod() - 1  
+            momentum = (1 + window).prod() - 1
             vol = window.std().replace(0, np.nan)
-            score = momentum / vol
-            score = score.replace([np.inf, -np.inf], np.nan).fillna(0)
+            top3 = momentum.nlargest(3).index
+            score = (momentum[top3] / vol[top3]).replace([np.inf, -np.inf], 0).fillna(0)
 
             if score.sum() == 0:
-                weights = np.ones(len(assets)) / len(assets)
+                w = pd.Series(0, index=assets)
             else:
-                weights = score / score.sum()
+                w_sel = score / score.sum()
+                w = pd.Series(0, index=assets)
+                w.loc[top3] = w_sel.values
 
-            self.portfolio_weights.loc[self.price.index[i], assets] = weights.values
+            w = w * 0.6
+            self.portfolio_weights.loc[self.price.index[i], assets] = w
+            
+
 
         
         """

@@ -117,21 +117,10 @@ class RiskParityPortfolio:
         TODO: Complete Task 2 Below
         """
 
-        # Loop over each date starting from lookback
-        for i in range(self.lookback, len(df)):
-            window_ret = df_returns[assets].iloc[i - self.lookback : i]
-
-            # volatility (std)
-            vol = window_ret.std()
-
-            # inverse vol (avoid division by zero)
-            inv_vol = 1 / vol.replace(0, np.nan)
-
-             # normalize weights
-            w = inv_vol / inv_vol.sum()
-
-            # assign weights to this specific date
-            self.portfolio_weights.loc[df.index[i], assets] = w.values
+        rolling_vol = df_returns[assets].rolling(self.lookback).std()
+        inv_vol = 1 / rolling_vol
+        weights = inv_vol.div(inv_vol.sum(axis=1), axis=0)
+        self.portfolio_weights.loc[:, assets] = weights
 
         """
         TODO: Complete Task 2 Above
